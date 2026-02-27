@@ -1,5 +1,7 @@
 # GWToolboxPlugins
 
+Download the DLLs from the [Releases](https://github.com/gam415/GWToolboxPlugins/releases) page.
+
 ## PartyReorder
 
 Automatically reorders party members by kicking and re-inviting them in a predefined order based on their professions. Designed for organized speedclear groups.

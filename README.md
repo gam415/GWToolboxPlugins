@@ -13,6 +13,18 @@ Automatically reorders party members by kicking and re-inviting them in a predef
 - Configurable action delay, timeout, and invite retries.
 - Optional chat notifications on start, when party is ready, and when all members are ticked.
 
+## SafeShadowWalk
+
+Prevents accidental Shadow Walk usage when protective buffs are low by placing a colored overlay over the skill icon.
+Configurable monitoring for Shadow Form, Shroud of Distress, or any other buff with a minimum time threshold.
+
+- Customizable minimum buff duration threshold (1-30 seconds).
+- Monitor any combination of buffs by skill ID.
+- Configurable explorable areas.
+- Optional click-blocking with warning messages showing exact remaining time.
+
+> Note: This plugin only blocks mouse clicks, not keyboard shortcuts.
+
 ## WeaponRangeIndicator
 
 Displays a colored overlay indicating whether your current enemy target is within weapon range for Spears and Flatbows.

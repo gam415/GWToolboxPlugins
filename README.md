@@ -2,6 +2,34 @@
 
 Download the DLLs from the [Releases](https://github.com/gam415/GWToolboxPlugins/releases) page.
 
+## AoeIndicator
+
+Draws a circle on the ground showing the active AoE of tracked skills.
+Only draws for skills cast in specific maps, while your character matches a configured profession combo.
+
+- Pre-defined tracked skills: Meteor Shower and Lava Font.
+- Per-skill enable/disable toggle.
+- Per-skill custom color and fill override.
+- Profession combo filter: only draws when your primary/secondary profession matches.
+- Configurable per-map (only activates on listed explorable areas, or all if list is empty).
+
+> Note: Detection is based on the `PlayEffect` server packet, which fires at the exact ground position of the AoE effect.
+> The plugin tracks skill activations to associate effects with the correct skill.
+
+### NameObfuscator
+
+Replaces your character name (and optionally your party members' names) with fake names
+everywhere on screen: party list, target indicator, chat messages, NPC dialogs, speech bubbles, and inventory header.
+
+- Custom or randomly generated name for your character.
+- Randomize party members' names with unique generated names per player.
+- Guild tag override: set a custom or random tag.
+- Favorites list for saving preferred random names and tags.
+- Floating indicator icon showing obfuscation state (active, pending, or disabled).
+- Chat commands: `/obfuscate on` and `/obfuscate off`.
+
+> Note: Name changes take effect on the next map load. Guild tag changes take effect immediately.
+
 ## PartyReorder
 
 Automatically reorders party members by kicking and re-inviting them in a predefined order based on their professions. Designed for organized speedclear groups.

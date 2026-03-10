@@ -2,19 +2,18 @@
 
 Download the DLLs from the [Releases](https://github.com/gam415/GWToolboxPlugins/releases) page.
 
-## AoeIndicator
+### EffectsIndicator
 
-Draws a circle on the ground showing the active AoE of tracked skills.
-Only draws for skills cast in specific maps, while your character matches a configured profession combo.
+Draws a circle on the ground when a tracked `PlayEffect` packet is detected.
+Each game skill triggers a visual effect identified by an Effect ID.
+When the server sends a `PlayEffect` packet whose Effect ID matches a tracked entry,
+a circle is rendered at that position for the configured duration.
 
-- Pre-defined tracked skills: Meteor Shower and Lava Font.
-- Per-skill enable/disable toggle.
-- Per-skill custom color and fill override.
-- Profession combo filter: only draws when your primary/secondary profession matches.
-- Configurable per-map (only activates on listed explorable areas, or all if list is empty).
-
-> Note: Detection is based on the `PlayEffect` server packet, which fires at the exact ground position of the AoE effect.
-> The plugin tracks skill activations to associate effects with the correct skill.
+- Pre-defined tracked effects (e.g. Meteor Shower, Lava Font) and custom entry support via the Effect Editor.
+- Per-effect enable/disable toggle, custom color, fill, and duration override.
+- Profession combo filter: only draws when playing specific primary/secondary profession roles.
+- Configurable per-map.
+- Option to track allied casts (party member effects are ignored by default).
 
 ### NameObfuscator
 
@@ -30,7 +29,7 @@ everywhere on screen: party list, target indicator, chat messages, NPC dialogs, 
 
 > Note: Name changes take effect on the next map load. Guild tag changes take effect immediately.
 
-## PartyReorder
+### PartyReorder
 
 Automatically reorders party members by kicking and re-inviting them in a predefined order based on their professions. Designed for organized speedclear groups.
 
@@ -41,25 +40,38 @@ Automatically reorders party members by kicking and re-inviting them in a predef
 - Configurable action delay, timeout, and invite retries.
 - Optional chat notifications on start, when party is ready, and when all members are ticked.
 
-## SafeShadowWalk
+### SafeShadowWalk
 
 Prevents accidental Shadow Walk usage when protective buffs are low by placing a colored overlay over the skill icon.
-Configurable monitoring for Shadow Form, Shroud of Distress, or any other buff with a minimum time threshold.
 
-- Customizable minimum buff duration threshold (1-30 seconds).
+- Customizable minimum buff duration threshold (1–30 seconds).
 - Monitor any combination of buffs by skill ID.
-- Configurable explorable areas.
-- Optional click-blocking with warning messages showing exact remaining time.
+- Configurable per-map (only explorable areas).
+- Optional click-blocking with warning messages showing remaining time for monitored skills.
 
 > Note: This plugin only blocks mouse clicks, not keyboard shortcuts.
 
-## WeaponRangeIndicator
+### TargetDetector
 
-Displays a colored overlay indicating whether your current enemy target is within weapon range for Spears and Flatbows.
+Automatically triggers configured actions when target agents are detected inside trigger zones in explorable areas.
+Designed for detecting enemy groups at their earliest rendering time in an instance.
 
-- Shows a green or red rectangle based on whether the target is in range.
-- Supports Spear and Flatbow range.
-- Accounts for altitude differences in range calculations.
-- Customizable in-range and out-of-range colors.
+- Polygon, Distance From (circle), or combined zone types.
+- Configurable trigger conditions: fully visible on minimap, visible or timeout, or immediate.
+- Ordered action list per zone: Mark Target, Ping Target, Select Target, Send Chat Message, Log Message.
+- Terrain and minimap zone preview overlay.
+- Zones fire once per map instance then auto-disable.
+
+Some of these features can be achieved by the SST plugin, but this plugin is more specialized at 
+detecting targets and will implement more specialized features in the future that aren't possible with SST.
+
+### WeaponRangeIndicator
+
+Draws a square indicating whether or not the target is in range of the currently equipped weapon.
+The square is green if the target is in range and red if it is out of range.
+The square is only displayed for supported weapon types, currently:
+
+1. Shortbow
+2. Spear
 
 > This plugin is based on the FlatbowRangeIndicator plugin by @JaborGW.

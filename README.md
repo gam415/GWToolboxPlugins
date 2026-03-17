@@ -71,7 +71,11 @@ Draws a square indicating whether or not the target is in range of the currently
 The square is green if the target is in range and red if it is out of range.
 The square is only displayed for supported weapon types, currently:
 
-1. Shortbow
-2. Spear
+1. Spear
+2. Flatbow
+3. Longbow
+4. Shortbow
+5. Hornbow
+6. Recurve Bow
 
 > This plugin is based on the FlatbowRangeIndicator plugin by @JaborGW.

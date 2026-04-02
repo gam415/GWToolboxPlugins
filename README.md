@@ -15,6 +15,17 @@ a circle is rendered at that position for the configured duration.
 - Configurable per-map.
 - Option to track allied casts (party member effects are ignored by default).
 
+### LootNotifier
+
+Detects when tracked items drop and are assigned to a player,
+then displays a notification with the item's requirement and name.
+
+- Configurable tracked item list with per-item enable/disable.
+- Local notification and optional party chat message on drop.
+- Customizable chat format with `[item]` and `[player]` placeholders.
+- Requirement display: parses item modifiers to show e.g. "q9 Crystalline Sword".
+- Option to only notify for your own loot or for all party drops.
+
 ### NameObfuscator
 
 Replaces your character name (and optionally your party members' names) with fake names

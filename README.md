@@ -2,6 +2,16 @@
 
 Download the DLLs from the [Releases](https://github.com/gam415/GWToolboxPlugins/releases) page.
 
+## Table of Contents
+
+- [EffectsIndicator](#effectsindicator)
+- [LootNotifier](#lootnotifier)
+- [NameObfuscator](#nameobfuscator)
+- [PartyReorder](#partyreorder)
+- [SafeShadowWalk](#safeshadowwalk)
+- [TargetDetector](#targetdetector)
+- [WeaponRangeIndicator](#weaponrangeindicator)
+
 ### EffectsIndicator
 
 Draws a circle on the ground when a tracked `PlayEffect` packet is detected.
@@ -15,6 +25,10 @@ a circle is rendered at that position for the configured duration.
 - Configurable per-map.
 - Option to track allied casts (party member effects are ignored by default).
 
+<img src="assets/EffectsIndicator1.PNG" height="250" /> <img src="assets/EffectsIndicator2.PNG" height="250" />
+
+[↑ Back to TOC](#table-of-contents)
+
 ### LootNotifier
 
 Detects when tracked items drop and are assigned to a player,
@@ -25,6 +39,10 @@ then displays a notification with the item's requirement and name.
 - Customizable chat format with `[item]` and `[player]` placeholders.
 - Requirement display: parses item modifiers to show e.g. "q9 Crystalline Sword".
 - Option to only notify for your own loot or for all party drops.
+
+<img src="assets/LootNotifier1.PNG" height="250" /> <img src="assets/LootNotifier2.PNG" />
+
+[↑ Back to TOC](#table-of-contents)
 
 ### NameObfuscator
 
@@ -40,6 +58,10 @@ everywhere on screen: party list, target indicator, chat messages, NPC dialogs, 
 
 > Note: Name changes take effect on the next map load. Guild tag changes take effect immediately.
 
+<img src="assets/NameObfuscator1.PNG" height="135" /> <img src="assets/NameObfuscator2.PNG" height="135" />
+
+[↑ Back to TOC](#table-of-contents)
+
 ### PartyReorder
 
 Automatically reorders party members by kicking and re-inviting them in a predefined order based on their professions. Designed for organized speedclear groups.
@@ -51,6 +73,10 @@ Automatically reorders party members by kicking and re-inviting them in a predef
 - Configurable action delay, timeout, and invite retries.
 - Optional chat notifications on start, when party is ready, and when all members are ticked.
 
+<img src="assets/PartyReorder1.PNG" height="250" /> <img src="assets/PartyReorder2.PNG" height="250" />
+
+[↑ Back to TOC](#table-of-contents)
+
 ### SafeShadowWalk
 
 Prevents accidental Shadow Walk usage when protective buffs are low by placing a colored overlay over the skill icon.
@@ -61,6 +87,10 @@ Prevents accidental Shadow Walk usage when protective buffs are low by placing a
 - Optional click-blocking with warning messages showing remaining time for monitored skills.
 
 > Note: This plugin only blocks mouse clicks, not keyboard shortcuts.
+
+<img src="assets/SafeShadowWalk1.PNG" height="250" /> <img src="assets/SafeShadowWalk2.gif" height="250" />
+
+[↑ Back to TOC](#table-of-contents)
 
 ### TargetDetector
 
@@ -76,6 +106,8 @@ Designed for detecting enemy groups at their earliest rendering time in an insta
 Some of these features can be achieved by the SST plugin, but this plugin is more specialized at 
 detecting targets and will implement more specialized features in the future that aren't possible with SST.
 
+[↑ Back to TOC](#table-of-contents)
+
 ### WeaponRangeIndicator
 
 Draws a square indicating whether or not the target is in range of the currently equipped weapon.
@@ -89,4 +121,6 @@ The square is only displayed for supported weapon types, currently:
 5. Hornbow
 6. Recurve Bow
 
-> This plugin is based on the FlatbowRangeIndicator plugin by @JaborGW.
+<img src="assets/WeaponRangeIndicator1.PNG" />
+
+[↑ Back to TOC](#table-of-contents)

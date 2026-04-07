@@ -14,16 +14,15 @@ Download the DLLs from the [Releases](https://github.com/gam415/GWToolboxPlugins
 
 ### EffectsIndicator
 
-Draws a circle on the ground when a tracked `PlayEffect` packet is detected.
-Each game skill triggers a visual effect identified by an Effect ID.
+Draws a circle on the ground when a tracked AoE skill is detected.
+Each AoE skill triggers a visual effect identified by an Effect ID.
 When the server sends a `PlayEffect` packet whose Effect ID matches a tracked entry,
 a circle is rendered at that position for the configured duration.
 
-- Pre-defined tracked effects (e.g. Meteor Shower, Lava Font) and custom entry support via the Effect Editor.
-- Per-effect enable/disable toggle, custom color, fill, and duration override.
-- Profession combo filter: only draws when playing specific primary/secondary profession roles.
-- Configurable per-map.
-- Option to track allied casts (party member effects are ignored by default).
+- Pre-defined tracked effects (e.g. **Meteor Shower, Lava Font, Chaos Storm**) and custom entry support via the Effect Editor.
+- Show on specific professions only (configurable).
+- Show on specific maps only (configurable).
+- Option to also track allied casts of AoE skills.
 
 <img src="assets/EffectsIndicator1.PNG" height="250" /> <img src="assets/EffectsIndicator2.PNG" height="250" />
 
@@ -104,7 +103,7 @@ Designed for detecting enemy groups at their earliest rendering time in an insta
 - Zones fire once per map instance then auto-disable.
 
 Some of these features can be achieved by the SST plugin, but this plugin is more specialized at 
-detecting targets and will implement more specialized features in the future that aren't possible with SST.
+detecting targets and implements more specialized features in the future that aren't possible with SST.
 
 [↑ Back to TOC](#table-of-contents)
 

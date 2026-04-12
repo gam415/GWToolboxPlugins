@@ -1,0 +1,191 @@
+name: Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_name:
+        description: "Release name (tag) in to fetch plugins artifacts from"
+        required: true
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Generate app token to access private repo
+        id: private-plugins-app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ vars.PRIVATE_PLUGINS_CLIENT_ID }}
+          private-key: ${{ secrets.PRIVATE_PLUGINS_KEY }}
+          owner: gam415
+          repositories: ToolboxPlugins
+
+      - name: Fetch source release metadata
+        id: source
+        env:
+          GH_TOKEN: ${{ steps.private-plugins-app-token.outputs.token }}
+          RELEASE_NAME: ${{ inputs.release_name }}
+        run: |
+          set -euo pipefail
+
+          echo "Fetching release '${RELEASE_NAME}' from gam415/ToolboxPlugins..."
+
+          RELEASE_JSON=$(gh release view "$RELEASE_NAME" \
+            --repo gam415/ToolboxPlugins \
+            --json tagName,isPrerelease,body)
+
+          IS_PRERELEASE=$(echo "$RELEASE_JSON" | jq -r '.isPrerelease')
+          TAG_NAME=$(echo "$RELEASE_JSON" | jq -r '.tagName')
+
+          echo "Source tag: ${TAG_NAME}, prerelease: ${IS_PRERELEASE}"
+
+          echo "is_prerelease=${IS_PRERELEASE}" >> "$GITHUB_OUTPUT"
+          echo "tag_name=${TAG_NAME}" >> "$GITHUB_OUTPUT"
+
+          # Write body to a file to avoid shell quoting / delimiter issues
+          echo "$RELEASE_JSON" | jq -r '.body // ""' > "$RUNNER_TEMP/source_body.txt"
+
+      - name: Download all artifacts from source release
+        env:
+          GH_TOKEN: ${{ steps.private-plugins-app-token.outputs.token }}
+          RELEASE_TAG: ${{ steps.source.outputs.tag_name }}
+        run: |
+          set -euo pipefail
+          mkdir -p ./artifacts
+          gh release download "$RELEASE_TAG" \
+            --repo gam415/ToolboxPlugins \
+            --dir ./artifacts
+          echo "Downloaded artifacts:"
+          ls -la ./artifacts/
+
+      - name: Determine release tag for this repository
+        id: tag
+        run: |
+          set -euo pipefail
+          TODAY=$(date -u +%Y-%m-%d)
+          echo "Today's date: ${TODAY}"
+
+          EXISTING_TAGS=$(git tag -l "${TODAY}*" | sort)
+          echo "Existing tags for today: ${EXISTING_TAGS:-<none>}"
+
+          if [ -z "$EXISTING_TAGS" ]; then
+            TAG="$TODAY"
+          elif echo "$EXISTING_TAGS" | grep -qx "$TODAY"; then
+            SUFFIX=1
+            while echo "$EXISTING_TAGS" | grep -qx "${TODAY}-${SUFFIX}"; do
+              SUFFIX=$((SUFFIX + 1))
+            done
+            TAG="${TODAY}-${SUFFIX}"
+          else
+            TAG="$TODAY"
+          fi
+
+          echo "Release tag: ${TAG}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Build release body
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          SOURCE_BODY=$(cat "$RUNNER_TEMP/source_body.txt")
+          BODY_FILE="$RUNNER_TEMP/release_body.md"
+
+          # Extract PluginName=version lines from the "## Plugins Versions" section
+          VERSION_LINES=$(echo "$SOURCE_BODY" \
+            | awk '/^## Plugins Versions/{found=1; next} /^## /{found=0} found' \
+            | grep -E '^[A-Za-z]+=([0-9]+\.){2}[0-9]+$' || true)
+
+          if [ -z "$VERSION_LINES" ]; then
+            echo "::warning::No PluginName=version lines found in source release body"
+          fi
+
+          # Fetch version lines from the latest release in this repository
+          declare -A PREV_VERSIONS
+          LATEST_BODY=$(gh release view --json body --jq '.body' 2>/dev/null || true)
+          if [ -n "$LATEST_BODY" ]; then
+            while IFS='=' read -r pname pver; do
+              [ -z "$pname" ] || [ -z "$pver" ] && continue
+              PREV_VERSIONS["$pname"]="$pver"
+            done <<< "$(echo "$LATEST_BODY" | grep -E '^[A-Za-z]+=.+$' || true)"
+          fi
+
+          # Write placeholder sections only for plugins whose version changed
+          : > "$BODY_FILE"
+          while IFS='=' read -r plugin_name plugin_version; do
+            [ -z "$plugin_name" ] || [ -z "$plugin_version" ] && continue
+            prev="${PREV_VERSIONS[$plugin_name]:-}"
+            if [ "$prev" = "$plugin_version" ]; then
+              echo "Skipping ${plugin_name} (unchanged at ${plugin_version})"
+              continue
+            fi
+            {
+              echo "### ${plugin_name} ${plugin_version}"
+              echo ""
+              echo "- "
+              echo ""
+            } >> "$BODY_FILE"
+          done <<< "$VERSION_LINES"
+
+          # Write separator and <details> block with all version lines
+          echo "---" >> "$BODY_FILE"
+          echo "" >> "$BODY_FILE"
+          echo "<details>" >> "$BODY_FILE"
+
+          FIRST=true
+          while IFS= read -r line; do
+            [ -z "$line" ] && continue
+            if [ "$FIRST" = true ]; then
+              FIRST=false
+            else
+              echo "<br />" >> "$BODY_FILE"
+            fi
+            echo "$line" >> "$BODY_FILE"
+          done <<< "$VERSION_LINES"
+
+          echo "</details>" >> "$BODY_FILE"
+
+          echo "--- Generated release body ---"
+          cat "$BODY_FILE"
+
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.tag.outputs.tag }}
+          IS_PRERELEASE: ${{ steps.source.outputs.is_prerelease }}
+        run: |
+          set -euo pipefail
+
+          ARGS=(
+            "$TAG"
+            --title "$TAG"
+            --notes-file "$RUNNER_TEMP/release_body.md"
+            --draft
+          )
+
+          if [ "$IS_PRERELEASE" = "true" ]; then
+            ARGS+=(--prerelease)
+          fi
+
+          ARGS+=(./artifacts/*)
+
+          gh release create "${ARGS[@]}"
+
+          echo "Draft release '${TAG}' created successfully."

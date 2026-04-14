@@ -22,6 +22,7 @@ a circle is rendered at that position for the configured duration.
 - Pre-defined tracked effects (e.g. **Meteor Shower, Lava Font, Chaos Storm**) and custom entry support via the Effect Editor.
 - Show on specific professions only (configurable).
 - Show on specific maps only (configurable).
+- Custom colors for each AoE effect.
 - Option to also track allied casts of AoE skills.
 
 <img src="assets/EffectsIndicator1.PNG" height="250" /> <img src="assets/EffectsIndicator2.PNG" height="250" />
@@ -47,6 +48,7 @@ then displays a notification with the item's requirement and name.
 
 Replaces your character name (and optionally your party members' names) with fake names
 everywhere on screen: party list, target indicator, chat messages, NPC dialogs, speech bubbles, and inventory header.
+Useful for streamers and recordings.
 
 - Custom or randomly generated name for your character.
 - Randomize party members' names with unique generated names per player.
@@ -95,6 +97,7 @@ Prevents accidental Shadow Walk usage when protective buffs are low by placing a
 
 Automatically triggers configured actions when target agents are detected inside trigger zones in explorable areas.
 Designed for detecting enemy groups at their earliest rendering time in an instance.
+Useful for automaticalling marking targets (`/marktargets`) or configure pings or chat/log messages depending on spawns.
 
 - Polygon, Distance From (circle), or combined zone types.
 - Configurable trigger conditions: fully visible on minimap, visible or timeout, or immediate.

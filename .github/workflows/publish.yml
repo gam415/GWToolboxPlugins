@@ -76,25 +76,27 @@ jobs:
 
       - name: Determine release tag for this repository
         id: tag
+        env:
+          IS_PRERELEASE: ${{ steps.source.outputs.is_prerelease }}
         run: |
           set -euo pipefail
           TODAY=$(date -u +%Y-%m-%d)
           echo "Today's date: ${TODAY}"
 
-          EXISTING_TAGS=$(git tag -l "${TODAY}*" | sort)
-          echo "Existing tags for today: ${EXISTING_TAGS:-<none>}"
-
-          if [ -z "$EXISTING_TAGS" ]; then
-            TAG="$TODAY"
-          elif echo "$EXISTING_TAGS" | grep -qx "$TODAY"; then
-            SUFFIX=1
-            while echo "$EXISTING_TAGS" | grep -qx "${TODAY}-${SUFFIX}"; do
-              SUFFIX=$((SUFFIX + 1))
-            done
-            TAG="${TODAY}-${SUFFIX}"
+          # Add pre- prefix for non-main branches
+          if [ "$IS_PRERELEASE" = "true" ]; then
+            TAG="pre-${TODAY}"
           else
-            TAG="$TODAY"
+            TAG="${TODAY}"
           fi
+          BASE_TAG="$TAG"
+          SUFFIX=0
+
+          # Find a unique tag name
+          while git ls-remote --tags origin "refs/tags/$TAG" | grep -q .; do
+            SUFFIX=$((SUFFIX + 1))
+            TAG="${BASE_TAG}_${SUFFIX}"
+          done
 
           echo "Release tag: ${TAG}"
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"

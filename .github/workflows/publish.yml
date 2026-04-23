@@ -16,7 +16,10 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
+      artifact-metadata: write
+      attestations: write
       contents: write
+      id-token: write
     defaults:
       run:
         shell: bash
@@ -73,6 +76,21 @@ jobs:
             --dir ./artifacts
           echo "Downloaded artifacts:"
           ls -la ./artifacts/
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v4.1.1
+
+      - name: Verify ToolboxPlugins artifacts
+        run: |
+          set -euo pipefail
+          for file in ./artifacts/*.dll; do
+            cosign verify-blob \
+              --bundle "${file}.sigstore.json" \
+              --certificate-identity-regexp "https://github.com/gam415/ToolboxPlugins" \
+              --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+              "$file"
+          done
+          rm -f ./artifacts/*.sigstore.json
 
       - name: Determine release tag for this repository
         id: tag
@@ -191,3 +209,8 @@ jobs:
           gh release create "${ARGS[@]}"
 
           echo "Draft release '${TAG}' created successfully."
+
+      - name: Attest
+        uses: actions/attest@v4
+        with:
+          subject-path: ./artifacts/*

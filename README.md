@@ -2,7 +2,7 @@
 
 Download the DLLs from the [Releases](https://github.com/gam415/GWToolboxPlugins/releases) page.
 
-## Table of Contents
+# Table of Contents
 
 - [EffectsIndicator](#effectsindicator)
 - [LootNotifier](#lootnotifier)
@@ -12,105 +12,125 @@ Download the DLLs from the [Releases](https://github.com/gam415/GWToolboxPlugins
 - [TargetDetector](#targetdetector)
 - [WeaponRangeIndicator](#weaponrangeindicator)
 
-### EffectsIndicator
+## EffectsIndicator
 
-Draws a circle on the ground when a tracked AoE skill is detected.
-Each AoE skill triggers a visual effect identified by an Effect ID.
-When the server sends a `PlayEffect` packet whose Effect ID matches a tracked entry,
-a circle is rendered at that position for the configured duration.
+> [!TIP]
+> *Not sure if you're standing in a meteor shower/lava font/etc?*
 
-- Pre-defined tracked effects (e.g. **Meteor Shower, Lava Font, Chaos Storm**) and custom entry support via the Effect Editor.
-- Show on specific professions only (configurable).
-- Show on specific maps only (configurable).
-- Custom colors for each AoE effect.
+Draws a circle on the terrain when a tracked AoE skill is detected.
+
+- Pre-defined tracked AoE skills (e.g. **Meteor Shower, Lava Font, Chaos Storm**) and custom entry
+  support via the Effect Editor.
+- Show on configured professions only.
+- Show on configured maps only.
+- Configurable colors for each AoE skill.
 - Option to also track allied casts of AoE skills.
 
 <img src="assets/EffectsIndicator1.PNG" height="250" /> <img src="assets/EffectsIndicator2.PNG" height="250" />
 
 [↑ Back to TOC](#table-of-contents)
 
-### LootNotifier
+## LootNotifier
+
+> [!TIP]
+> *Tired of asking "what req" when someone gets a drop?*
 
 Detects when tracked items drop and are assigned to a player,
-then displays a notification with the item's requirement and name.
+then displays a window and/or sends a notification with the item's requirement and name.
 
 - Configurable tracked item list with per-item enable/disable.
-- Local notification and optional party chat message on drop.
-- Customizable chat format with `[item]` and `[player]` placeholders.
-- Requirement display: parses item modifiers to show e.g. "q9 Crystalline Sword".
-- Option to only notify for your own loot or for all party drops.
+- Shows a window with the item name/req and assigned player + "Send GZ" button.
+- Customizable chat formats with `[item]` and `[player]` placeholders.
+- Option to only track your own loot, others loot, or all party drops.
 
-<img src="assets/LootNotifier1.PNG" height="250" /> <img src="assets/LootNotifier2.PNG" />
+<img src="assets/LootNotifier1.PNG" height="250" /> <img src="assets/LootNotifier3.PNG" height="250" />
+<img src="assets/LootNotifier2.PNG" />
 
 [↑ Back to TOC](#table-of-contents)
 
-### NameObfuscator
+## NameObfuscator
+
+> [!TIP]
+> *Want to stream without revealing your character's name?*
 
 Replaces your character name (and optionally your party members' names) with fake names
-everywhere on screen: party list, target indicator, chat messages, NPC dialogs, speech bubbles, and inventory header.
+everywhere on screen: party list, target indicator, chat messages, NPC dialogs, speech bubbles, and
+inventory header.
 Useful for streamers and recordings.
 
-- Custom or randomly generated name for your character.
-- Randomize party members' names with unique generated names per player.
+- Name override: custom or randomly generated name for your character.
 - Guild tag override: set a custom or random tag.
+- Randomize party members' names with unique generated names per player.
 - Favorites list for saving preferred random names and tags.
 - Floating indicator icon showing obfuscation state (active, pending, or disabled).
 - Chat commands: `/obfuscate on` and `/obfuscate off`.
 
-> Note: Name changes take effect on the next map load. Guild tag changes take effect immediately.
-
 <img src="assets/NameObfuscator1.PNG" height="135" /> <img src="assets/NameObfuscator2.PNG" height="135" />
+
+> [!NOTE]
+> Name changes take effect on the next map load. Guild tag changes take effect immediately.
 
 [↑ Back to TOC](#table-of-contents)
 
-### PartyReorder
+## PartyReorder
 
-Automatically reorders party members by kicking and re-inviting them in a predefined order based on their professions. Designed for organized speedclear groups.
+> [!TIP]
+> *Tired of manually reordering your party?*
 
-- Reorder party slots by primary/secondary profession via UI button or /reorder chat command.
+Automatically reorders party members by kicking and re-inviting them in a predefined order based on
+their professions. Designed for organized speedclear groups.
+
+- Reorder party slots by primary/secondary profession via UI button or `/reorder` chat command.
 - Ships with default sequences for common speed clears (DoA, UWSC, SooSC, etc.).
 - Full sequence editor: create, edit, and delete custom sequences with per-outpost configuration.
-- Validates party composition before reordering (correct professions, party size, leader status).
 - Configurable action delay, timeout, and invite retries.
-- Optional chat notifications on start, when party is ready, and when all members are ticked.
+- Optional chat notifications on reorder, and when all party members are ticked.
 
 <img src="assets/PartyReorder1.PNG" height="250" /> <img src="assets/PartyReorder2.PNG" height="250" />
 
 [↑ Back to TOC](#table-of-contents)
 
-### SafeShadowWalk
+## SafeShadowWalk
 
-Prevents accidental Shadow Walk usage when protective buffs are low by placing a colored overlay over the skill icon.
+> [!TIP]
+> *Shadow Walk made you drop SF by accident again?*
 
+Prevents accidental Shadow Walk usage when protective buffs are low by placing a colored overlay
+over the skill icon.
+
+- Configurable per-map (only explorable areas).
 - Customizable minimum buff duration threshold (1–30 seconds).
 - Monitor any combination of buffs by skill ID.
-- Configurable per-map (only explorable areas).
-- Optional click-blocking with warning messages showing remaining time for monitored skills.
-
-> Note: This plugin only blocks mouse clicks, not keyboard shortcuts.
+- Optional click-blocking overlay with warning messages showing remaining time for monitored skills.
 
 <img src="assets/SafeShadowWalk1.PNG" height="250" /> <img src="assets/SafeShadowWalk2.gif" height="250" />
 
+> [!NOTE]
+> The overlay only blocks mouse clicks on the skill, not keyboard shortcuts.
+
 [↑ Back to TOC](#table-of-contents)
 
-### TargetDetector
+## TargetDetector
 
-Automatically triggers configured actions when target agents are detected inside trigger zones in explorable areas.
+> [!TIP]
+> *Having trouble with King coldfires in UW?*
+
+Automatically triggers configured actions when target agents are detected inside trigger zones in
+explorable areas.
 Designed for detecting enemy groups at their earliest rendering time in an instance.
-Useful for automaticalling marking targets (`/marktargets`) or configure pings or chat/log messages depending on spawns.
+Useful for automaticalling marking targets (`/marktargets`) or configure pings or chat/log messages
+depending on spawns.
 
-- Polygon, Distance From (circle), or combined zone types.
-- Configurable trigger conditions: fully visible on minimap, visible or timeout, or immediate.
-- Ordered action list per zone: Mark Target, Ping Target, Select Target, Send Chat Message, Log Message.
-- Terrain and minimap zone preview overlay.
-- Zones fire once per map instance then auto-disable.
-
-Some of these features can be achieved by the SST plugin, but this plugin is more specialized at 
-detecting targets and implements more specialized features in the future that aren't possible with SST.
+- Configured to `/marktarget` King coldfire patrol as UWSC T1.
+- Will also track their aggro location on minimap to help you not over-extend them.
+- Configured to ping your UWSC duo partner when Pits top is bad.
+- Configured to `/marktarget` Pits and Plains patrol skeles.
+- Can be customized to track other spawns/patrols in UW or other maps and trigger a veriaty of
+  actions.
 
 [↑ Back to TOC](#table-of-contents)
 
-### WeaponRangeIndicator
+## WeaponRangeIndicator
 
 Draws a square indicating whether or not the target is in range of the currently equipped weapon.
 The square is green if the target is in range and red if it is out of range.

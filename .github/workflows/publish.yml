@@ -47,6 +47,7 @@ jobs:
         run: |
           set -euo pipefail
 
+          RELEASE_NAME=$(echo "$RELEASE_NAME" | xargs)
           echo "Fetching release '${RELEASE_NAME}' from gam415/ToolboxPlugins..."
 
           RELEASE_JSON=$(gh release view "$RELEASE_NAME" \
@@ -125,7 +126,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          SOURCE_BODY=$(cat "$RUNNER_TEMP/source_body.txt")
+          SOURCE_BODY=$(cat "$RUNNER_TEMP/source_body.txt" | tr -d '\r')
           BODY_FILE="$RUNNER_TEMP/release_body.md"
 
           # Extract PluginName=version lines from the "## Plugins Versions" section
@@ -137,6 +138,31 @@ jobs:
             echo "::warning::No PluginName=version lines found in source release body"
           fi
 
+          # Extract per-plugin changelogs from "## PluginName" sections (before "## Plugins Versions")
+          declare -A PLUGIN_CHANGELOGS
+          current_plugin=""
+          current_lines=""
+          while IFS= read -r line; do
+            if [[ "$line" =~ ^##\ Plugins\ Versions ]]; then
+              break
+            elif [[ "$line" =~ ^##\ ([A-Za-z0-9_-]+)$ ]]; then
+              if [ -n "$current_plugin" ] && [ -n "$current_lines" ]; then
+                PLUGIN_CHANGELOGS["$current_plugin"]="$current_lines"
+              fi
+              current_plugin="${BASH_REMATCH[1]}"
+              current_lines=""
+            elif [ -n "$current_plugin" ] && [[ "$line" =~ ^-\  ]]; then
+              if [ -n "$current_lines" ]; then
+                current_lines="${current_lines}"$'\n'"${line}"
+              else
+                current_lines="${line}"
+              fi
+            fi
+          done <<< "$SOURCE_BODY"
+          if [ -n "$current_plugin" ] && [ -n "$current_lines" ]; then
+            PLUGIN_CHANGELOGS["$current_plugin"]="$current_lines"
+          fi
+
           # Fetch version lines from the latest release in this repository
           declare -A PREV_VERSIONS
           LATEST_BODY=$(gh release view --json body --jq '.body' 2>/dev/null || true)
@@ -144,10 +170,10 @@ jobs:
             while IFS='=' read -r pname pver; do
               [ -z "$pname" ] || [ -z "$pver" ] && continue
               PREV_VERSIONS["$pname"]="$pver"
-            done <<< "$(echo "$LATEST_BODY" | grep -E '^[A-Za-z0-9_-]+=([0-9]+\.){2}[0-9]+$' || true)"
+            done <<< "$(echo "$LATEST_BODY" | tr -d '\r' | grep -E '^[A-Za-z0-9_-]+=([0-9]+\.){2}[0-9]+$' || true)"
           fi
 
-          # Write placeholder sections only for plugins whose version changed, alphabetically sorted
+          # Write sections only for plugins whose version changed, alphabetically sorted
           : > "$BODY_FILE"
           while IFS='=' read -r plugin_name plugin_version; do
             [ -z "$plugin_name" ] || [ -z "$plugin_version" ] && continue
@@ -156,10 +182,15 @@ jobs:
               echo "Skipping ${plugin_name} (unchanged at ${plugin_version})"
               continue
             fi
+            changelog="${PLUGIN_CHANGELOGS[$plugin_name]:-}"
             {
               echo "### ${plugin_name} ${plugin_version}"
               echo ""
-              echo "- "
+              if [ -n "$changelog" ]; then
+                echo "$changelog"
+              else
+                echo "- "
+              fi
               echo ""
             } >> "$BODY_FILE"
           done <<< "$(echo "$VERSION_LINES" | sort -f)"

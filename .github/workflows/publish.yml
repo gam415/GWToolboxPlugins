@@ -34,7 +34,7 @@ jobs:
         id: private-plugins-app-token
         uses: actions/create-github-app-token@v3
         with:
-          app-id: ${{ vars.PRIVATE_PLUGINS_CLIENT_ID }}
+          client-id: ${{ vars.PRIVATE_PLUGINS_CLIENT_ID }}
           private-key: ${{ secrets.PRIVATE_PLUGINS_KEY }}
           owner: gam415
           repositories: ToolboxPlugins

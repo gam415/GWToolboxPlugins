@@ -131,7 +131,7 @@ jobs:
           # Extract PluginName=version lines from the "## Plugins Versions" section
           VERSION_LINES=$(echo "$SOURCE_BODY" \
             | awk '/^## Plugins Versions/{found=1; next} /^## /{found=0} found' \
-            | grep -E '^[A-Za-z]+=([0-9]+\.){2}[0-9]+$' || true)
+            | grep -E '^[A-Za-z0-9_-]+=([0-9]+\.){2}[0-9]+$' || true)
 
           if [ -z "$VERSION_LINES" ]; then
             echo "::warning::No PluginName=version lines found in source release body"
@@ -144,10 +144,10 @@ jobs:
             while IFS='=' read -r pname pver; do
               [ -z "$pname" ] || [ -z "$pver" ] && continue
               PREV_VERSIONS["$pname"]="$pver"
-            done <<< "$(echo "$LATEST_BODY" | grep -E '^[A-Za-z]+=.+$' || true)"
+            done <<< "$(echo "$LATEST_BODY" | grep -E '^[A-Za-z0-9_-]+=([0-9]+\.){2}[0-9]+$' || true)"
           fi
 
-          # Write placeholder sections only for plugins whose version changed
+          # Write placeholder sections only for plugins whose version changed, alphabetically sorted
           : > "$BODY_FILE"
           while IFS='=' read -r plugin_name plugin_version; do
             [ -z "$plugin_name" ] || [ -z "$plugin_version" ] && continue
@@ -162,24 +162,15 @@ jobs:
               echo "- "
               echo ""
             } >> "$BODY_FILE"
-          done <<< "$VERSION_LINES"
+          done <<< "$(echo "$VERSION_LINES" | sort -f)"
 
-          # Write separator and <details> block with all version lines
+          # Write separator and <details> block with all version lines as-is
           echo "---" >> "$BODY_FILE"
           echo "" >> "$BODY_FILE"
           echo "<details>" >> "$BODY_FILE"
-
-          FIRST=true
-          while IFS= read -r line; do
-            [ -z "$line" ] && continue
-            if [ "$FIRST" = true ]; then
-              FIRST=false
-            else
-              echo "<br />" >> "$BODY_FILE"
-            fi
-            echo "$line" >> "$BODY_FILE"
-          done <<< "$VERSION_LINES"
-
+          echo "" >> "$BODY_FILE"
+          echo "$VERSION_LINES" >> "$BODY_FILE"
+          echo "" >> "$BODY_FILE"
           echo "</details>" >> "$BODY_FILE"
 
           echo "--- Generated release body ---"

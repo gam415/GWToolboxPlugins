@@ -125,7 +125,7 @@ depending on spawns.
 - Will also track their aggro location on minimap to help you not over-extend them.
 - Configured to ping your UWSC duo partner when Pits top is bad.
 - Configured to `/marktarget` Pits and Plains patrol skeles.
-- Can be customized to track other spawns/patrols in UW or other maps and trigger a veriaty of
+- Can be customized to track other spawns/patrols in UW or other maps and trigger a variety of
   actions.
 
 [↑ Back to TOC](#table-of-contents)

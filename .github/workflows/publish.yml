@@ -1,11 +1,13 @@
 name: Publish
 
 on:
+  schedule:
+    - cron: '*/15 * * * *'
   workflow_dispatch:
     inputs:
       release_name:
-        description: "Release name (tag) in to fetch plugins artifacts from"
-        required: true
+        description: "Release name in ToolboxPlugins to fetch plugins artifacts from (leave empty for automated behavior)"
+        required: false
         type: string
 
 concurrency:
@@ -13,8 +15,61 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  publish:
+  resolve:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    outputs:
+      matrix: ${{ steps.resolve.outputs.matrix }}
+      has_releases: ${{ steps.resolve.outputs.has_releases }}
+    steps:
+      - name: Generate app token to access private repo
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.PRIVATE_PLUGINS_CLIENT_ID }}
+          private-key: ${{ secrets.PRIVATE_PLUGINS_KEY }}
+          owner: gam415
+          repositories: ToolboxPlugins
+
+      - name: Resolve releases to publish
+        id: resolve
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          RELEASE_NAME: ${{ inputs.release_name }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+
+          RELEASE_NAME=$(echo "${RELEASE_NAME:-}" | tr -d '[:space:]')
+          if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ -n "$RELEASE_NAME" ]; then
+            MATRIX=$(jq -cn --arg r "$RELEASE_NAME" '{include: [{release_name: $r}]}')
+          else
+            RELEASES=$(gh release list --repo gam415/ToolboxPlugins --limit 50 --json tagName,isPrerelease)
+            MATRIX=$(printf '%s' "$RELEASES" | jq -c '{
+              include: [
+                (map(select(.isPrerelease == false)) | first | {release_name: .tagName}),
+                (map(select(.isPrerelease == true)) | first | {release_name: .tagName})
+              ] | map(select(.release_name != null))
+            }')
+          fi
+
+          COUNT=$(printf '%s' "$MATRIX" | jq '.include | length')
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+          if [ "$COUNT" -eq 0 ]; then
+            echo "No releases found in gam415/ToolboxPlugins, nothing to publish."
+            echo "has_releases=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_releases=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  publish:
+    needs: resolve
+    if: needs.resolve.outputs.has_releases == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJson(needs.resolve.outputs.matrix) }}
+      fail-fast: false
     permissions:
       artifact-metadata: write
       attestations: write
@@ -24,12 +79,6 @@ jobs:
       run:
         shell: bash
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-          fetch-tags: true
-
       - name: Generate app token to access private repo
         id: private-plugins-app-token
         uses: actions/create-github-app-token@v3
@@ -43,29 +92,44 @@ jobs:
         id: source
         env:
           GH_TOKEN: ${{ steps.private-plugins-app-token.outputs.token }}
-          RELEASE_NAME: ${{ inputs.release_name }}
+          RELEASE_NAME: ${{ matrix.release_name }}
         run: |
           set -euo pipefail
 
-          RELEASE_NAME=$(echo "$RELEASE_NAME" | xargs)
           echo "Fetching release '${RELEASE_NAME}' from gam415/ToolboxPlugins..."
-
           RELEASE_JSON=$(gh release view "$RELEASE_NAME" \
             --repo gam415/ToolboxPlugins \
-            --json tagName,isPrerelease,body)
+            --json tagName,name,isPrerelease,body)
 
-          IS_PRERELEASE=$(echo "$RELEASE_JSON" | jq -r '.isPrerelease')
-          TAG_NAME=$(echo "$RELEASE_JSON" | jq -r '.tagName')
+          IS_PRERELEASE=$(printf '%s' "$RELEASE_JSON" | jq -r '.isPrerelease')
+          TAG_NAME=$(printf '%s' "$RELEASE_JSON" | jq -r '.tagName')
+          RELEASE_TITLE=$(printf '%s' "$RELEASE_JSON" | jq -r '.name // .tagName')
 
-          echo "Source tag: ${TAG_NAME}, prerelease: ${IS_PRERELEASE}"
+          echo "Source tag: ${TAG_NAME}, title: ${RELEASE_TITLE}, prerelease: ${IS_PRERELEASE}"
 
           echo "is_prerelease=${IS_PRERELEASE}" >> "$GITHUB_OUTPUT"
           echo "tag_name=${TAG_NAME}" >> "$GITHUB_OUTPUT"
+          echo "release_title=${RELEASE_TITLE}" >> "$GITHUB_OUTPUT"
 
-          # Write body to a file to avoid shell quoting / delimiter issues
-          echo "$RELEASE_JSON" | jq -r '.body // ""' > "$RUNNER_TEMP/source_body.txt"
+          printf '%s' "$RELEASE_JSON" | jq -r '.body // ""' > "$RUNNER_TEMP/source_body.txt"
+
+      - name: Check if release already exists
+        id: check_existing
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ steps.source.outputs.tag_name }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG_NAME" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "Release '${TAG_NAME}' already exists in this repository. Skipping."
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Release '${TAG_NAME}' does not exist yet. Proceeding."
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Download all artifacts from source release
+        if: steps.check_existing.outputs.exists != 'true'
         env:
           GH_TOKEN: ${{ steps.private-plugins-app-token.outputs.token }}
           RELEASE_TAG: ${{ steps.source.outputs.tag_name }}
@@ -79,9 +143,11 @@ jobs:
           ls -la ./artifacts/
 
       - name: Install Cosign
+        if: steps.check_existing.outputs.exists != 'true'
         uses: sigstore/cosign-installer@v4.1.1
 
       - name: Verify ToolboxPlugins artifacts
+        if: steps.check_existing.outputs.exists != 'true'
         run: |
           set -euo pipefail
           for file in ./artifacts/*.dll; do
@@ -93,152 +159,87 @@ jobs:
           done
           rm -f ./artifacts/*.sigstore.json
 
-      - name: Determine release tag for this repository
-        id: tag
-        env:
-          IS_PRERELEASE: ${{ steps.source.outputs.is_prerelease }}
-        run: |
-          set -euo pipefail
-          TODAY=$(date -u +%Y-%m-%d)
-          echo "Today's date: ${TODAY}"
-
-          # Add pre- prefix for non-main branches
-          if [ "$IS_PRERELEASE" = "true" ]; then
-            TAG="pre-${TODAY}"
-          else
-            TAG="${TODAY}"
-          fi
-          BASE_TAG="$TAG"
-          SUFFIX=0
-
-          # Find a unique tag name
-          while git ls-remote --tags origin "refs/tags/$TAG" | grep -q .; do
-            SUFFIX=$((SUFFIX + 1))
-            TAG="${BASE_TAG}_${SUFFIX}"
-          done
-
-          echo "Release tag: ${TAG}"
-          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
-
       - name: Build release body
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: steps.check_existing.outputs.exists != 'true'
         run: |
           set -euo pipefail
-
-          SOURCE_BODY=$(cat "$RUNNER_TEMP/source_body.txt" | tr -d '\r')
+          SOURCE="$RUNNER_TEMP/source_body.txt"
           BODY_FILE="$RUNNER_TEMP/release_body.md"
 
-          # Extract PluginName=version lines from the "## Plugins Versions" section
-          VERSION_LINES=$(echo "$SOURCE_BODY" \
-            | awk '/^## Plugins Versions/{found=1; next} /^## /{found=0} found' \
-            | grep -E '^[A-Za-z0-9_-]+=([0-9]+\.){2}[0-9]+$' || true)
-
-          if [ -z "$VERSION_LINES" ]; then
-            echo "::warning::No PluginName=version lines found in source release body"
+          if ! grep -q '^## Plugins Versions$' "$SOURCE"; then
+            echo "::error::No '## Plugins Versions' section found in source release body"
+            exit 1
           fi
 
-          # Extract per-plugin changelogs from "## PluginName" sections (before "## Plugins Versions")
-          declare -A PLUGIN_CHANGELOGS
-          current_plugin=""
-          current_lines=""
-          while IFS= read -r line; do
-            if [[ "$line" =~ ^##\ Plugins\ Versions ]]; then
-              break
-            elif [[ "$line" =~ ^##\ ([A-Za-z0-9_-]+)$ ]]; then
-              if [ -n "$current_plugin" ] && [ -n "$current_lines" ]; then
-                PLUGIN_CHANGELOGS["$current_plugin"]="$current_lines"
-              fi
-              current_plugin="${BASH_REMATCH[1]}"
-              current_lines=""
-            elif [ -n "$current_plugin" ] && [[ "$line" =~ ^-\  ]]; then
-              if [ -n "$current_lines" ]; then
-                current_lines="${current_lines}"$'\n'"${line}"
-              else
-                current_lines="${line}"
-              fi
-            fi
-          done <<< "$SOURCE_BODY"
-          if [ -n "$current_plugin" ] && [ -n "$current_lines" ]; then
-            PLUGIN_CHANGELOGS["$current_plugin"]="$current_lines"
+          # Everything before "## Plugins Versions" stays as-is
+          # (includes per-plugin sections, ## Features, ## Bug Fixes, etc.)
+          awk '/^## Plugins Versions$/{exit} {print}' "$SOURCE" > "$BODY_FILE"
+
+          # Strip commit link suffixes added by git-cliff, e.g. " ([`a1b2c3d`](../../commit/...))"
+          sed -i -E 's/ \(\[`[^`]*`\]\([^)]*\)\)$//' "$BODY_FILE"
+
+          # Strip trailing whitespace and trailing blank lines
+          sed -i 's/[[:space:]]*$//' "$BODY_FILE"
+          sed -i -e '/^[[:space:]]*$/{:a;$d;N;ba}' "$BODY_FILE"
+
+          # If there are no changelog sections at all, say so
+          HAS_SECTIONS=$(grep -c '^## ' "$BODY_FILE" || true)
+          if [ "$HAS_SECTIONS" = "0" ]; then
+            printf '\n\nNo other changes.' >> "$BODY_FILE"
           fi
 
-          # Fetch version lines from the latest release in this repository
-          declare -A PREV_VERSIONS
-          LATEST_BODY=$(gh release view --json body --jq '.body' 2>/dev/null || true)
-          if [ -n "$LATEST_BODY" ]; then
-            while IFS='=' read -r pname pver; do
-              [ -z "$pname" ] || [ -z "$pver" ] && continue
-              PREV_VERSIONS["$pname"]="$pver"
-            done <<< "$(echo "$LATEST_BODY" | tr -d '\r' | grep -E '^[A-Za-z0-9_-]+=([0-9]+\.){2}[0-9]+$' || true)"
-          fi
+          # Append separator and folded plugins versions block
+          {
+            echo ""
+            echo "---"
+            echo ""
+            echo "<details>"
+            echo "<summary>Plugins versions</summary>"
+            echo ""
+            awk '/^## Plugins Versions$/{found=1; next} found{print}' "$SOURCE"
+            echo "</details>"
+          } >> "$BODY_FILE"
 
-          # Write sections only for plugins whose version changed, alphabetically sorted
-          : > "$BODY_FILE"
-          while IFS='=' read -r plugin_name plugin_version; do
-            [ -z "$plugin_name" ] || [ -z "$plugin_version" ] && continue
-            prev="${PREV_VERSIONS[$plugin_name]:-}"
-            if [ "$prev" = "$plugin_version" ]; then
-              echo "Skipping ${plugin_name} (unchanged at ${plugin_version})"
-              continue
-            fi
-            changelog="${PLUGIN_CHANGELOGS[$plugin_name]:-}"
-            {
-              echo "### ${plugin_name} ${plugin_version}"
-              echo ""
-              if [ -n "$changelog" ]; then
-                echo "$changelog"
-              else
-                echo "- "
-              fi
-              echo ""
-            } >> "$BODY_FILE"
-          done <<< "$(echo "$VERSION_LINES" | sort -f)"
-
-          # Write separator and <details> block with all version lines as-is
-          echo "---" >> "$BODY_FILE"
-          echo "" >> "$BODY_FILE"
-          echo "<details>" >> "$BODY_FILE"
-          FIRST=true
-          while IFS= read -r vline; do
-            [ -z "$vline" ] && continue
-            if [ "$FIRST" = "true" ]; then
-              FIRST=false
-            else
-              echo "<br />" >> "$BODY_FILE"
-            fi
-            echo "$vline" >> "$BODY_FILE"
-          done <<< "$VERSION_LINES"
-          echo "</details>" >> "$BODY_FILE"
-
-          echo "--- Generated release body ---"
+          echo "--- Release body ---"
           cat "$BODY_FILE"
 
-      - name: Create draft release
+      - name: Attest
+        if: steps.check_existing.outputs.exists != 'true'
+        uses: actions/attest@v4
+        with:
+          subject-path: ./artifacts/*.dll
+
+      - name: Build release body
+        if: steps.check_existing.outputs.exists != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ steps.tag.outputs.tag }}
+          TAG_NAME: ${{ steps.source.outputs.tag_name }}
+          RELEASE_TITLE: ${{ steps.source.outputs.release_title }}
           IS_PRERELEASE: ${{ steps.source.outputs.is_prerelease }}
         run: |
           set -euo pipefail
 
           ARGS=(
-            "$TAG"
-            --title "$TAG"
+            "$TAG_NAME"
+            --repo "$GITHUB_REPOSITORY"
+            --title "$RELEASE_TITLE"
             --notes-file "$RUNNER_TEMP/release_body.md"
           )
 
           if [ "$IS_PRERELEASE" = "true" ]; then
             ARGS+=(--prerelease)
+          else
+            ARGS+=(--latest)
           fi
 
-          ARGS+=(./artifacts/*)
+          ARGS+=("./artifacts/"*)
 
           gh release create "${ARGS[@]}"
 
-          echo "Draft release '${TAG}' created successfully."
+          echo "Release '${RELEASE_TITLE}' (${TAG_NAME}) created successfully."
 
       - name: Attest
+        if: steps.check_existing.outputs.exists != 'true'
         uses: actions/attest@v4
         with:
-          subject-path: ./artifacts/*
+          subject-path: ./artifacts/*.dll

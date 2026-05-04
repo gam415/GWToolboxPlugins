@@ -118,7 +118,7 @@ over the skill icon.
 Automatically triggers configured actions when target agents are detected inside trigger zones in
 explorable areas.
 Designed for detecting enemy groups at their earliest rendering time in an instance.
-Useful for automatically marking targets (`/marktargets`) or configure pings or chat/log messages
+Useful for automatically marking targets (`/marktarget`) or configure pings or chat/log messages
 depending on spawns.
 
 - Configured to `/marktarget` King coldfire patrol as UWSC T1.

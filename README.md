@@ -41,7 +41,7 @@ then displays a window and/or sends a notification with the item's requirement a
 - Configurable tracked item list with per-item enable/disable.
 - Shows a window with the item name/req and assigned player + "Send GZ" button.
 - Customizable chat formats with `[item]` and `[player]` placeholders.
-- Option to only track your own loot, others loot, or all party drops.
+- Option to only track your own loot, others' loot, or all party drops.
 
 <img src="assets/LootNotifier1.PNG" height="250" /> <img src="assets/LootNotifier3.PNG" height="250" />
 <img src="assets/LootNotifier2.PNG" />
@@ -118,7 +118,7 @@ over the skill icon.
 Automatically triggers configured actions when target agents are detected inside trigger zones in
 explorable areas.
 Designed for detecting enemy groups at their earliest rendering time in an instance.
-Useful for automaticalling marking targets (`/marktargets`) or configure pings or chat/log messages
+Useful for automatically marking targets (`/marktargets`) or configure pings or chat/log messages
 depending on spawns.
 
 - Configured to `/marktarget` King coldfire patrol as UWSC T1.

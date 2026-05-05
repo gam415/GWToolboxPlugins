@@ -185,7 +185,7 @@ jobs:
           # If there are no changelog sections at all, say so
           HAS_SECTIONS=$(grep -c '^## ' "$BODY_FILE" || true)
           if [ "$HAS_SECTIONS" = "0" ]; then
-            printf '\n\nNo other changes.' >> "$BODY_FILE"
+            printf '\n\nNo other changes.\n' >> "$BODY_FILE"
           fi
 
           # Append separator and folded plugins versions block

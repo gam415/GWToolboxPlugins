@@ -203,13 +203,7 @@ jobs:
           echo "--- Release body ---"
           cat "$BODY_FILE"
 
-      - name: Attest
-        if: steps.check_existing.outputs.exists != 'true'
-        uses: actions/attest@v4
-        with:
-          subject-path: ./artifacts/*.dll
-
-      - name: Build release body
+      - name: Create release
         if: steps.check_existing.outputs.exists != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

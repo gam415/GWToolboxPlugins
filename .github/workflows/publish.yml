@@ -97,9 +97,17 @@ jobs:
           set -euo pipefail
 
           echo "Fetching release '${RELEASE_NAME}' from gam415/ToolboxPlugins..."
-          RELEASE_JSON=$(gh release view "$RELEASE_NAME" \
-            --repo gam415/ToolboxPlugins \
-            --json tagName,name,isPrerelease,body)
+          for attempt in 1 2 3; do
+            RELEASE_JSON=$(gh release view "$RELEASE_NAME" \
+              --repo gam415/ToolboxPlugins \
+              --json tagName,name,isPrerelease,body 2>&1) && break
+            echo "::warning::Attempt ${attempt} failed: ${RELEASE_JSON}"
+            [ "$attempt" -lt 3 ] && sleep $((attempt * 5))
+          done
+          if ! printf '%s' "$RELEASE_JSON" | jq -e . > /dev/null 2>&1; then
+            echo "::error::Failed to fetch release after 3 attempts: ${RELEASE_JSON}"
+            exit 1
+          fi
 
           IS_PRERELEASE=$(printf '%s' "$RELEASE_JSON" | jq -r '.isPrerelease')
           TAG_NAME=$(printf '%s' "$RELEASE_JSON" | jq -r '.tagName')
@@ -120,12 +128,18 @@ jobs:
           TAG_NAME: ${{ steps.source.outputs.tag_name }}
         run: |
           set -euo pipefail
-          if gh release view "$TAG_NAME" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+          API_RESPONSE=$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${TAG_NAME}" \
+            --include 2>&1 || true)
+          HTTP_STATUS=$(printf '%s' "$API_RESPONSE" | awk 'NR==1{print $2; exit}')
+          if [ "$HTTP_STATUS" = "200" ]; then
             echo "Release '${TAG_NAME}' already exists in this repository. Skipping."
             echo "exists=true" >> "$GITHUB_OUTPUT"
-          else
+          elif [ "$HTTP_STATUS" = "404" ]; then
             echo "Release '${TAG_NAME}' does not exist yet. Proceeding."
             echo "exists=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::Unexpected HTTP status '${HTTP_STATUS}' while checking release '${TAG_NAME}'"
+            exit 1
           fi
 
       - name: Download all artifacts from source release
@@ -144,13 +158,19 @@ jobs:
 
       - name: Install Cosign
         if: steps.check_existing.outputs.exists != 'true'
-        uses: sigstore/cosign-installer@v4.1.1
+        uses: sigstore/cosign-installer@v4.1.2
 
       - name: Verify ToolboxPlugins artifacts
         if: steps.check_existing.outputs.exists != 'true'
         run: |
           set -euo pipefail
-          for file in ./artifacts/*.dll; do
+          shopt -s nullglob
+          dlls=(./artifacts/*.dll)
+          if [ ${#dlls[@]} -eq 0 ]; then
+            echo "::error::No .dll files found in artifacts"
+            exit 1
+          fi
+          for file in "${dlls[@]}"; do
             cosign verify-blob \
               --bundle "${file}.sigstore.json" \
               --certificate-identity-regexp "https://github.com/gam415/ToolboxPlugins" \
@@ -226,9 +246,22 @@ jobs:
             ARGS+=(--latest)
           fi
 
-          ARGS+=("./artifacts/"*)
+          shopt -s nullglob
+          artifacts=("./artifacts/"*)
+          if [ ${#artifacts[@]} -eq 0 ]; then
+            echo "::error::No artifact files found to attach to release"
+            exit 1
+          fi
+          ARGS+=("${artifacts[@]}")
 
-          gh release create "${ARGS[@]}"
+          gh release create "${ARGS[@]}" || {
+            EXIT_CODE=$?
+            if gh release view "$TAG_NAME" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+              echo "::warning::Release '${TAG_NAME}' was created by a concurrent run. Treating as success."
+            else
+              exit $EXIT_CODE
+            fi
+          }
 
           echo "Release '${RELEASE_TITLE}' (${TAG_NAME}) created successfully."
 

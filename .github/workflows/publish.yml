@@ -79,6 +79,11 @@ jobs:
       run:
         shell: bash
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Generate app token to access private repo
         id: private-plugins-app-token
         uses: actions/create-github-app-token@v3
@@ -232,6 +237,19 @@ jobs:
           IS_PRERELEASE: ${{ steps.source.outputs.is_prerelease }}
         run: |
           set -euo pipefail
+
+          # Create and push an annotated tag ourselves before creating the
+          # release. `gh release create` would otherwise auto-create a
+          # lightweight tag pointing at the default branch tip; since this
+          # repo's own source rarely changes between publishes, consecutive
+          # releases would end up tagging the same stale commit and sort
+          # incorrectly on GitHub's release list (which sorts by the tagged
+          # commit's date). An annotated tag carries its own tagger
+          # timestamp (now), so releases sort by actual publish time.
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git tag -a "$TAG_NAME" -m "$TAG_NAME"
+          git push origin "$TAG_NAME"
 
           ARGS=(
             "$TAG_NAME"

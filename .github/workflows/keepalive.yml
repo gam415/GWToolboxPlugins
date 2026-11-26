@@ -1,0 +1,35 @@
+name: Keepalive
+
+# GitHub automatically disables scheduled workflows after 60 days without
+# any repository activity (pushes, PRs, etc.). This workflow keeps the repo
+# "active" by pushing a small commit periodically, so that the Publish
+# workflow's cron schedule never gets auto-disabled.
+#
+# Runs well within the 60 day window (every month) and can also be
+# triggered manually if needed.
+
+on:
+  schedule:
+    - cron: "0 0 1 */1 *" # once a month
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Keep repository active
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit --allow-empty -m "chore: keepalive - prevent scheduled workflows from being disabled"
+          git push

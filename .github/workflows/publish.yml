@@ -2,7 +2,7 @@ name: Publish
 
 on:
   schedule:
-    - cron: '*/15 * * * *'
+    - cron: '17 */3 * * *' # every 3 hours
   workflow_dispatch:
     inputs:
       release_name:

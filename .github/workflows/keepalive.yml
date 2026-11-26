@@ -7,6 +7,13 @@ name: Keepalive
 #
 # Runs well within the 60 day window (every month) and can also be
 # triggered manually if needed.
+#
+# The commit is empty and must stay inert: it must not trigger or alter any
+# other workflow, release, tag or changelog. The "chore: keepalive" prefix is
+# relied upon by the ToolboxPlugins repo (git-cliff skip rule, main->dev sync
+# filter), and "[skip ci]" suppresses any push/pull_request triggered workflow.
+# Publish only runs on schedule/workflow_dispatch and takes release notes from
+# ToolboxPlugins, so it never reads this repo's commit history.
 
 on:
   schedule:
@@ -31,5 +38,5 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git commit --allow-empty -m "chore: keepalive - prevent scheduled workflows from being disabled"
+          git commit --allow-empty -m "chore: keepalive - prevent scheduled workflows from being disabled [skip ci]"
           git push
